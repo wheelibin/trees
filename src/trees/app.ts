@@ -94,7 +94,6 @@ export const go = () => {
 const init = () => {
   scene = new Scene();
   scene.background = new Color(0xcce0ff);
-  // scene.fog = new Fog("#ff0000", 1, 1000);
 
   camera = new PerspectiveCamera(
     30,
@@ -253,16 +252,20 @@ function makeTree(
 
   const endOfBranchPos = pos.clone().add(branchDirection);
 
-  const isLargerBranch =
-    length !== options.height && length > options.height / 3;
+  const isLargerBranch = length > options.height / 3;
+  const drawingTrunk = length === options.height;
   if (isLargerBranch) {
     // fill in the gaps between the larger branches with spheres
-    const knot = createSphere(rTop * 1.5, branchColour);
-    group.add(knot);
+    if (!drawingTrunk) {
+      const knot = createSphere(rTop * 1.5, branchColour);
+      group.add(knot);
+    }
   } else {
-    // add leaves to the branch
-    addLeaf(group);
-    tree.add(group);
+    if (!drawingTrunk) {
+      // add leaves to the branch
+      addLeaf(group);
+      tree.add(group);
+    }
   }
 
   const numberOfBranches = getBranchCount();
@@ -273,8 +276,6 @@ function makeTree(
     ry = MathUtils.degToRad(
       randomFloatFromInterval(-options.maxBranchAngle, options.maxBranchAngle)
     );
-    // rz += 15;
-    // ry += 15;
 
     makeTree(
       length *
@@ -303,7 +304,6 @@ function getBranchCount() {
 function addLeaf(group: Group) {
   const scale = options.leafSize * MathUtils.seededRandom();
   const rx = MathUtils.degToRad(360 * MathUtils.seededRandom());
-  // const ry = MathUtils.degToRad(360 * MathUtils.seededRandom());
   const rz = MathUtils.degToRad(360 * MathUtils.seededRandom());
 
   const leafColour = new Color()

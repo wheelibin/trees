@@ -71,7 +71,7 @@ let options: Options = {
   seed: 8883, //MathUtils.randInt(0, 10000),
   treeColour: 0x382718,
   leafColour: 0x6b6a06,
-  groundColour: 0x55552c,
+  groundColour: 0x89895d,
 };
 
 export const go = () => {
@@ -95,22 +95,13 @@ const init = () => {
   scene = new Scene();
   scene.background = new Color(0xcce0ff);
 
-  camera = new PerspectiveCamera(
-    30,
-    window.innerWidth / window.innerHeight,
-    1,
-    5
-  );
-  camera.add(new PointLight(0xffffff));
-  camera.position.set(0, 1, 5);
-
   // LIGHTS
   const hemisphereLightColour = new Color().setHSL(0.6, 1, 0.6);
   addHemisphereLight(hemisphereLightColour, scene);
   addDirectionalLight(scene);
 
   // GROUND
-  const groundGeo = new PlaneGeometry(10000, 10000);
+  const groundGeo = new PlaneGeometry(1000, 1000);
   groundMaterial = new MeshLambertMaterial({ color: options.groundColour });
 
   const ground = new Mesh(groundGeo, groundMaterial);
@@ -118,27 +109,6 @@ const init = () => {
   ground.rotation.x = -Math.PI / 2;
   ground.receiveShadow = true;
   scene.add(ground);
-
-  // SKYDOME
-  const uniforms = {
-    topColor: { value: new Color(0x0077ff) },
-    bottomColor: { value: new Color(0xffffff) },
-    offset: { value: 33 },
-    exponent: { value: 0.6 },
-  };
-  uniforms["topColor"].value.copy(hemisphereLightColour);
-
-  // scene.fog.color.copy(uniforms["bottomColor"].value);
-
-  const skyGeo = new SphereGeometry(4000, 32, 15);
-  const skyMat = new ShaderMaterial({
-    uniforms: uniforms,
-    vertexShader: vertexShaderSource,
-    fragmentShader: fragmentShaderSource,
-    side: BackSide,
-  });
-  const sky = new Mesh(skyGeo, skyMat);
-  scene.add(sky);
 
   // GUI
   createGUI();

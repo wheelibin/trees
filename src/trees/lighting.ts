@@ -36,15 +36,12 @@ export const addDirectionalLight = (scene: Scene, showHelper = false) => {
   light.shadow.mapSize.width = 2048;
   light.shadow.mapSize.height = 2048;
 
-  const d = 50;
+  const d = 40;
 
   light.shadow.camera.left = -d;
   light.shadow.camera.right = d;
   light.shadow.camera.top = d;
   light.shadow.camera.bottom = -d;
-
-  light.shadow.camera.far = 3500;
-  light.shadow.bias = -0.0001;
 
   if (showHelper) {
     const helper = new DirectionalLightHelper(light, 10);

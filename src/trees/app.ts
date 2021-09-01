@@ -9,13 +9,9 @@ import {
   Group,
   MeshLambertMaterial,
   Mesh,
-  SphereGeometry,
   Box3,
-  ShaderMaterial,
-  BackSide,
   PlaneGeometry,
   sRGBEncoding,
-  PointLight,
 } from "three";
 
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
@@ -23,7 +19,6 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls";
 import Stats from "three/examples/jsm/libs/stats.module";
 import { GUI } from "three/examples/jsm/libs/dat.gui.module";
-import { vertexShaderSource, fragmentShaderSource } from "./shaders";
 import { createCylinder, createSphere } from "./shapes";
 import { addDirectionalLight, addHemisphereLight } from "./lighting";
 
@@ -45,7 +40,6 @@ type Options = {
 const loader = new GLTFLoader();
 
 const clock = new Clock();
-let delta: number;
 let tree: Group;
 let renderer: WebGLRenderer;
 let scene: Scene;
@@ -68,27 +62,20 @@ let options: Options = {
   leafSize: 25,
   maxBranchAngle: 95,
   minBranchLength: 3,
-  seed: 8883, //MathUtils.randInt(0, 10000),
+  seed: 8708, //MathUtils.randInt(0, 10000),
   treeColour: 0x382718,
   leafColour: 0x6b6a06,
   groundColour: 0x89895d,
 };
 
-export const go = () => {
-  loader.load(
-    "assets/leaf/scene.gltf",
-    function (gltf) {
-      leafModel = gltf.scene.clone();
-      leafModel.castShadow = true;
-      leafModel.receiveShadow = true;
-      init();
-      animate();
-    },
-    undefined,
-    function (error) {
-      console.error(error);
-    }
-  );
+export const go = async () => {
+  const gltfLeaf = await loader.loadAsync("assets/leaf/scene.gltf");
+  leafModel = gltfLeaf.scene.clone();
+  leafModel.castShadow = true;
+  leafModel.receiveShadow = true;
+
+  init();
+  animate();
 };
 
 const init = () => {
@@ -146,6 +133,20 @@ const init = () => {
     orbitControls.enabled = true;
   });
 
+  window.addEventListener("keydown", function (event) {
+    switch (event.key.toUpperCase()) {
+      case "R":
+        transformControls.setMode("rotate");
+        break;
+      case "V":
+        transformControls.setMode("translate");
+        break;
+
+      default:
+        break;
+    }
+  });
+
   createTree();
 };
 
@@ -197,7 +198,6 @@ function makeTree(
   if (length < options.minBranchLength) {
     addLeaf(group);
     tree.add(group);
-
     return;
   }
 
@@ -238,7 +238,7 @@ function makeTree(
     }
   }
 
-  const numberOfBranches = getBranchCount();
+  const numberOfBranches = getNumberOfBranches();
   for (let i = 0; i < numberOfBranches; i++) {
     rz = MathUtils.degToRad(
       randomFloatFromInterval(-options.maxBranchAngle, options.maxBranchAngle)
@@ -264,7 +264,7 @@ function makeTree(
   }
 }
 
-function getBranchCount() {
+function getNumberOfBranches() {
   const rnd = MathUtils.seededRandom();
   return rnd < 1 - options.branchDensity
     ? randomIntFromInterval(1, 2)

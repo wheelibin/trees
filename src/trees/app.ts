@@ -12,7 +12,13 @@ import {
   Box3,
   PlaneGeometry,
   SRGBColorSpace,
+  InstancedMesh,
+  Matrix4,
+  Quaternion,
+  Euler,
+  BufferGeometry,
 } from "three";
+import { mergeGeometries } from "three/examples/jsm/utils/BufferGeometryUtils.js";
 
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
@@ -49,6 +55,13 @@ let orbitControls: OrbitControls;
 let transformControls: TransformControls;
 let stats: Stats;
 let groundMaterial: MeshLambertMaterial;
+let leafInstancedMesh: InstancedMesh;
+let leafInstanceIndex = 0;
+let leafMergedGeometry: BufferGeometry;
+let leafModelCenter: Vector3;
+let leafModelSize: Vector3;
+let leafMaterial: MeshLambertMaterial;
+const MAX_LEAF_INSTANCES = 50_000;
 
 const minBranchLengthRange = [2, 10];
 const minBranchLengthRatioRange = [0.75, 0.9];
@@ -62,10 +75,29 @@ let options: Options = {
   leafSize: 25,
   maxBranchAngle: 95,
   minBranchLength: 3,
-  seed: 8708, //MathUtils.randInt(0, 10000),
+  seed: 8372, //MathUtils.randInt(0, 10000),
   treeColour: 0x382718,
   leafColour: 0x6b6a06,
   groundColour: 0x89895d,
+};
+
+const setupLeafInstancing = () => {
+  leafModel.updateWorldMatrix(true, true);
+  const geometries: BufferGeometry[] = [];
+  leafModel.traverse((child) => {
+    if (child instanceof Mesh) {
+      const geo = child.geometry.clone();
+      geo.applyMatrix4(child.matrixWorld);
+      geometries.push(geo);
+    }
+  });
+  leafMergedGeometry = mergeGeometries(geometries)!;
+
+  const bbox = new Box3().setFromObject(leafModel);
+  leafModelCenter = bbox.getCenter(new Vector3());
+  leafModelSize = bbox.getSize(new Vector3());
+
+  leafMaterial = new MeshLambertMaterial();
 };
 
 export const go = async () => {
@@ -74,6 +106,7 @@ export const go = async () => {
   leafModel.castShadow = true;
   leafModel.receiveShadow = true;
 
+  setupLeafInstancing();
   init();
   animate();
 };
@@ -154,7 +187,20 @@ const createTree = () => {
   MathUtils.seededRandom(options.seed);
   scene.remove(tree);
   tree = new Group();
+
+  leafInstanceIndex = 0;
+  leafInstancedMesh = new InstancedMesh(leafMergedGeometry, leafMaterial, MAX_LEAF_INSTANCES);
+  leafInstancedMesh.castShadow = true;
+  leafInstancedMesh.receiveShadow = true;
+  leafInstancedMesh.count = 0;
+  tree.add(leafInstancedMesh);
+
   makeTree(options.height, new Vector3(0, 0, 0), 0, 0, options.height / 10);
+
+  leafInstancedMesh.count = leafInstanceIndex;
+  leafInstancedMesh.instanceMatrix.needsUpdate = true;
+  if (leafInstancedMesh.instanceColor) leafInstancedMesh.instanceColor.needsUpdate = true;
+
   scene.add(tree);
   tree.position.set(0, -40, 0);
 };
@@ -272,9 +318,9 @@ function getNumberOfBranches() {
 }
 
 function addLeaf(group: Group) {
-  const scale = options.leafSize * MathUtils.seededRandom();
+  const s = options.leafSize * MathUtils.seededRandom();
   const rx = MathUtils.degToRad(360 * MathUtils.seededRandom());
-  const rz = MathUtils.degToRad(360 * MathUtils.seededRandom());
+  const leafRz = MathUtils.degToRad(360 * MathUtils.seededRandom());
 
   const leafColour = new Color()
     .setHex(options.leafColour)
@@ -284,57 +330,26 @@ function addLeaf(group: Group) {
       MathUtils.seededRandom() / 8
     );
 
-  if (!options.hasLeaves) {
-    return;
-  }
+  if (!options.hasLeaves || leafInstanceIndex >= MAX_LEAF_INSTANCES) return;
 
-  const leaf = leafModel.clone();
-  leaf.rotation.setFromVector3(new Vector3(0, 0, 0));
+  // Pivot offset (replicates the original centering + stem adjustment, scaled by s)
+  const leafPos = new Vector3(
+    s * (-leafModelCenter.x + leafModelSize.x * 0.0075),
+    s * (-leafModelCenter.y + leafModelSize.y * 0.01),
+    s * (-leafModelCenter.z - leafModelSize.z * 0.45)
+  );
 
-  // scale and re-position
-  // -------------
-  const bbox = new Box3().setFromObject(leaf);
-  const center = bbox.getCenter(new Vector3());
-  const size = bbox.getSize(new Vector3());
-  leaf.scale.set(scale, scale, scale);
+  const M_group = new Matrix4().compose(
+    group.position,
+    new Quaternion().setFromEuler(group.rotation),
+    new Vector3(1, 1, 1)
+  );
+  const M_rotParent = new Matrix4().makeRotationFromEuler(new Euler(rx, 0, leafRz));
+  const M_leaf = new Matrix4().compose(leafPos, new Quaternion(), new Vector3(s, s, s));
 
-  bbox.setFromObject(leaf);
-  bbox.getCenter(center);
-  bbox.getSize(size);
-
-  var box = new Box3().setFromObject(leaf);
-  box.getCenter(leaf.position); // this re-sets the leaf position
-  leaf.position.add(new Vector3(0, 0, size.z / 2));
-  leaf.position.multiplyScalar(-1);
-
-  leaf.position.copy(center).multiplyScalar(-1);
-  // -------------
-  // end scale and re-position
-
-  var rotationParent = new Group();
-  rotationParent.add(leaf);
-
-  // re-position the leaf stem to the centre of the parent
-  // so it becomes the pivot point for rotation
-  leaf.position.z -= size.z * 0.45;
-  leaf.position.x += size.x * 0.0075;
-  leaf.position.y += size.y * 0.01;
-
-  rotationParent.rotation.x = rx;
-  rotationParent.rotation.z = rz;
-  leaf.traverse(function (child) {
-    if (child as Mesh) {
-      var newMaterial = new MeshLambertMaterial({
-        color: leafColour,
-      });
-      (child as Mesh).material = newMaterial;
-
-      child.castShadow = true;
-      child.receiveShadow = true;
-    }
-  });
-
-  group.add(rotationParent);
+  leafInstancedMesh.setMatrixAt(leafInstanceIndex, M_group.multiply(M_rotParent).multiply(M_leaf));
+  leafInstancedMesh.setColorAt(leafInstanceIndex, leafColour);
+  leafInstanceIndex++;
 }
 
 function createGUI() {

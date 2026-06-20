@@ -12,7 +12,7 @@ export const addHemisphereLight = (
   scene: Scene,
   showHelper = false
 ) => {
-  const light = new HemisphereLight(0xffffff, 0xffffff, 0.3);
+  const light = new HemisphereLight(0xffffff, 0xffffff, 0.8);
   light.color = color;
   light.groundColor.setHSL(0.095, 1, 0.75);
   light.position.set(0, 50, 0);

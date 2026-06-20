@@ -11,14 +11,14 @@ import {
   Mesh,
   Box3,
   PlaneGeometry,
-  sRGBEncoding,
+  SRGBColorSpace,
 } from "three";
 
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { TransformControls } from "three/examples/jsm/controls/TransformControls";
 import Stats from "three/examples/jsm/libs/stats.module";
-import { GUI } from "three/examples/jsm/libs/dat.gui.module";
+import GUI from "lil-gui";
 import { createCylinder, createSphere } from "./shapes";
 import { addDirectionalLight, addHemisphereLight } from "./lighting";
 
@@ -107,7 +107,7 @@ const init = () => {
   });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
-  renderer.outputEncoding = sRGBEncoding;
+  renderer.outputColorSpace = SRGBColorSpace;
   renderer.shadowMap.enabled = true;
   document.body.appendChild(renderer.domElement);
 

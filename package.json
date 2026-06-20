@@ -3,7 +3,8 @@
   "version": "0.1.6",
   "private": true,
   "dependencies": {
-    "three": "^0.131.3"
+    "lil-gui": "^0.21.0",
+    "three": "^0.184.0"
   },
   "scripts": {
     "start": "vite",
@@ -12,11 +13,10 @@
     "deploy": "gh-pages -d dist"
   },
   "devDependencies": {
-    "@types/dat.gui": "^0.7.7",
     "@types/node": "^26.0.0",
-    "@types/three": "^0.131.0",
-    "gh-pages": "^3.2.3",
-    "typescript": "^4.3.5",
+    "@types/three": "^0.184.1",
+    "gh-pages": "^6.3.0",
+    "typescript": "^6.0.3",
     "vite": "^8.0.16"
   }
 }
